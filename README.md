@@ -10,7 +10,7 @@ and **observability via [LangSmith](https://smith.langchain.com)**.
 
 It contains two complementary parts:
 
-1. **A deployable FastAPI service** (`app.py`) that exposes a text-generation
+1. **A deployable FastAPI service** (`llmops/` package, entry point `app.py`) that exposes a text-generation
    endpoint backed by an Ollama-served model (`llama3.2`), wired through a
    LangChain runnable chain and traced with LangSmith. A `Dockerfile` is
    included to containerize it.
@@ -25,7 +25,7 @@ It contains two complementary parts:
 - **Local-first LLMs** served by Ollama (no external model API required).
 - **LangSmith tracing** enabled via environment variables for run
   observability (the LLMOps angle).
-- **Pluggable PDF parsing** (`py_modules/document_loader.py`) implementing the
+- **Pluggable PDF parsing** (`llmops/document_loader.py`) implementing the
   Strategy pattern with `PyPDFLoader` and `UnstructuredLoader` backends.
 - **RAG pipeline notebooks**: chunking with `RecursiveCharacterTextSplitter`,
   embedding with `OllamaEmbeddings`, storage/retrieval in `QdrantVectorStore`,
@@ -51,8 +51,8 @@ It contains two complementary parts:
 
 ```mermaid
 flowchart LR
-    Client[Client / curl] -->|GET /generate?prompt=...| API[FastAPI app.py]
-    API --> Chain[LangChain chain\nOllamaLLM | StrOutputParser]
+    Client[Client / curl] -->|GET /generate?prompt=...| API[FastAPI create_app\nllmops/routes.py]
+    API --> Chain[TextGenerator Protocol\nOllamaGenerator: OllamaLLM | StrOutputParser]
     Chain --> Ollama[(Ollama server\nlocalhost:11434\nllama3.2)]
     Chain -.traces.-> LangSmith[(LangSmith)]
     API -->|JSON response| Client
@@ -108,9 +108,27 @@ Required variable names:
 | `LANGCHAIN_ENDPOINT`   | LangSmith endpoint (`https://api.smith.langchain.com`) |
 | `LANGCHAIN_PROJECT`    | Project name traces are grouped under            |
 
-> **Note:** The current `app.py` sets these values inline via `os.environ`.
-> For real deployments, load them from the environment / `.env` instead of
-> hardcoding them (see *Limitations / next steps*).
+`LANGCHAIN_PROJECT`, `LANGCHAIN_ENDPOINT` and `LANGCHAIN_TRACING_V2` default to
+`Docker-APP`, `https://api.smith.langchain.com` and `true` if unset
+(`llmops/config.py`). `LANGCHAIN_API_KEY` is only ever read from the
+environment. Optional: `OLLAMA_MODEL` (default `llama3.2`) and
+`OLLAMA_BASE_URL` (default `http://localhost:11434`).
+
+## Project layout
+
+```
+app.py                 uvicorn entry point (app = create_app())
+llmops/
+  config.py            Settings from env + LangSmith defaults
+  chain.py             TextGenerator Protocol, OllamaGenerator
+  routes.py            /generate route
+  main.py              create_app(generator=None) factory
+  document_loader.py   PDF parsing strategies (used by the notebooks)
+tests/                 pytest suite (fake generator, no Ollama needed)
+```
+
+Tests inject a fake via `create_app(generator=...)`. Run them with
+`pip install pytest httpx && pytest`.
 
 ## Run
 
@@ -165,12 +183,9 @@ instance. Sample input data is under `DataFiles/`.
 
 ## Limitations / Next Steps
 
-- **Secrets are hardcoded in `app.py`** (LangSmith API key and project config).
-  These should be moved to environment variables / `.env` and the existing key
-  rotated. See `.env.example`.
-- The `/generate` endpoint uses a fixed model (`llama3.2`) and has no prompt
+- The `/generate` endpoint has no prompt
   templating, streaming, or input validation beyond FastAPI defaults.
-- No automated tests or CI are included yet.
+- Tests cover the HTTP layer and settings only (Ollama and Qdrant are not exercised); no CI is included.
 - The notebooks are exploratory and not packaged as reusable modules or
   endpoints.
 - Docker networking to a host-run Ollama needs manual configuration (see *Run*).
