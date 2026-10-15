@@ -45,7 +45,7 @@ It contains two complementary parts:
 | RAG / vectors     | Qdrant (`langchain-qdrant`, `qdrant-client`)            |
 | Document loading  | PyPDFLoader, UnstructuredLoader, PyMuPDF                |
 | Notebooks         | Jupyter, matplotlib, Pillow                             |
-| Packaging         | Docker (python:3.9-slim)                                |
+| Packaging         | Docker (python:3.12-slim)                               |
 
 ## Architecture
 
@@ -70,7 +70,7 @@ flowchart LR
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+ (the Docker image uses 3.12)
 - [Ollama](https://ollama.com) installed and running locally, with the model pulled:
   ```bash
   ollama pull llama3.2
