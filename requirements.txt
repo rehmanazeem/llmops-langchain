@@ -1,0 +1,19 @@
+# --- Core service (app.py) ---
+fastapi
+uvicorn
+pydantic
+langchain-core
+langchain-ollama
+
+# --- RAG / multimodal notebooks ---
+langchain
+langchain-community
+langchain-text-splitters
+langchain-qdrant
+langchain-unstructured
+qdrant-client
+unstructured
+pypdf
+PyMuPDF
+pillow
+matplotlib
